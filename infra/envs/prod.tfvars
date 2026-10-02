@@ -1,0 +1,10 @@
+service_name     = "my-service"
+environment      = "prod"
+aws_region       = "eu-west-1"
+cluster_name     = "main-ecs-cluster"
+vpc_tag_name     = "main"
+hosted_zone_name = "example.com"
+domain_name      = "my-service.example.com"
+cpu              = 512
+memory           = 1024
+desired_count    = 2

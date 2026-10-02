@@ -1,0 +1,20 @@
+# App track - promotion. MANUAL runs only, from main.
+# Run with env.TARGET_ENV=stage (promotes dev's smoke-passed digest) or
+# env.TARGET_ENV=prod (promotes stage's smoke-passed digest). Nothing is rebuilt;
+# the exact digest that passed dev is deployed. Add an approval for prod in the
+# pipeline settings (see README).
+version: 1
+parameters:
+  env.SERVICE_NAME: "my-service"
+  env.AWS_REGION: "eu-west-1"
+  env.GIT_BRANCH: "%teamcity.build.branch%"
+  env.TARGET_ENV: "stage"
+  env.AWS_ROLE_ARN: "arn:aws:iam::REPLACE-ME:role/my-service-ci-%env.TARGET_ENV%"
+jobs:
+  Promote:
+    name: Promote by digest
+    runs-on: self-hosted
+    steps:
+      - type: script
+        name: Promote, deploy and smoke test
+        script-content: ./scripts/promote.sh "%env.TARGET_ENV%"

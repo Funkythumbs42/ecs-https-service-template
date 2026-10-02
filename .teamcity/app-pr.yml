@@ -1,0 +1,21 @@
+# App track - PR checks. Auto-run on pull requests (configure in Pipeline settings).
+# Unit tests + an arm64 image build (no push, no AWS access needed).
+version: 1
+parameters:
+  env.SERVICE_NAME: "my-service"
+jobs:
+  Test:
+    name: Unit tests
+    runs-on: self-hosted
+    steps:
+      - type: script
+        name: dotnet test
+        docker-image: "mcr.microsoft.com/dotnet/sdk:8.0"
+        script-content: ./scripts/test.sh
+  Build:
+    name: Build image (linux/arm64)
+    runs-on: self-hosted
+    steps:
+      - type: script
+        name: docker buildx build
+        script-content: ./scripts/build.sh "pr-%build.number%"

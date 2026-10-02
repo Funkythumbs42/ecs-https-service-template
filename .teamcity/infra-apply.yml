@@ -1,0 +1,38 @@
+# Infra track - apply. MANUAL runs only, from main, one environment per run
+# (env.TARGET_ENV = dev | stage | prod). Plan, then apply exactly that plan.
+# The image digest comes from SSM, so an infra apply never changes/rolls back
+# the running image; tf-apply.sh aborts if the digest moved after the plan.
+version: 1
+parameters:
+  env.SERVICE_NAME: "my-service"
+  env.AWS_REGION: "eu-west-1"
+  env.GIT_BRANCH: "%teamcity.build.branch%"
+  env.TARGET_ENV: "dev"
+  env.AWS_ROLE_ARN: "arn:aws:iam::REPLACE-ME:role/my-service-tf-apply-%env.TARGET_ENV%"
+jobs:
+  Plan:
+    name: Terraform plan
+    runs-on: self-hosted
+    steps:
+      - type: script
+        name: terraform plan
+        script-content: ./scripts/tf-plan.sh "%env.TARGET_ENV%"
+    files-publication:
+      - path: "infra/tfplan-*"
+        share-with-jobs: true
+        publish-artifact: true
+      - path: ".artifacts/plan-digest-*.txt"
+        share-with-jobs: true
+        publish-artifact: false
+  Apply:
+    name: Terraform apply
+    runs-on: self-hosted
+    dependencies:
+      - Plan:
+          files:
+            - "infra/tfplan-*"
+            - ".artifacts/plan-digest-*.txt"
+    steps:
+      - type: script
+        name: terraform apply
+        script-content: ./scripts/tf-apply.sh "%env.TARGET_ENV%"

@@ -1,0 +1,56 @@
+# App track - main branch. Auto-run on commits to main.
+# test -> build + push (arm64) -> deploy dev (by digest) -> smoke dev.
+# A passing smoke test records the digest as dev's smoke-passed-digest,
+# which is the only thing app-promote.yml will promote.
+version: 1
+parameters:
+  env.SERVICE_NAME: "my-service"
+  env.AWS_REGION: "eu-west-1"
+  env.GIT_BRANCH: "%teamcity.build.branch%"
+  # IAM role assumed by the scripts (no static keys). Replace the placeholder.
+  env.AWS_ROLE_ARN: "arn:aws:iam::REPLACE-ME:role/my-service-ci-dev"
+jobs:
+  Test:
+    name: Unit tests
+    runs-on: self-hosted
+    steps:
+      - type: script
+        name: dotnet test
+        docker-image: "mcr.microsoft.com/dotnet/sdk:8.0"
+        script-content: ./scripts/test.sh
+  BuildPush:
+    name: Build and push image
+    runs-on: self-hosted
+    dependencies:
+      - Test
+    steps:
+      - type: script
+        name: Build (linux/arm64)
+        script-content: ./scripts/build.sh
+      - type: script
+        name: Push to ECR
+        script-content: ./scripts/push.sh
+    files-publication:
+      - path: .artifacts/image-digest.txt
+        share-with-jobs: true
+        publish-artifact: true
+  DeployDev:
+    name: Deploy dev
+    runs-on: self-hosted
+    dependencies:
+      - BuildPush:
+          files:
+            - .artifacts/image-digest.txt
+    steps:
+      - type: script
+        name: Deploy digest to dev
+        script-content: ./scripts/deploy.sh dev
+  SmokeDev:
+    name: Smoke test dev
+    runs-on: self-hosted
+    dependencies:
+      - DeployDev
+    steps:
+      - type: script
+        name: Smoke test
+        script-content: ./scripts/smoke.sh dev

@@ -1,0 +1,29 @@
+# Infra track - PR checks. Auto-run on pull requests touching infra/.
+# fmt/validate + plan for every environment (read-only; nothing is applied).
+version: 1
+parameters:
+  env.SERVICE_NAME: "my-service"
+  env.AWS_REGION: "eu-west-1"
+  env.AWS_ROLE_ARN: "arn:aws:iam::REPLACE-ME:role/my-service-tf-plan"
+jobs:
+  PlanDev:
+    name: Plan dev
+    runs-on: self-hosted
+    steps:
+      - type: script
+        name: terraform plan dev
+        script-content: ./scripts/tf-plan.sh dev
+  PlanStage:
+    name: Plan stage
+    runs-on: self-hosted
+    steps:
+      - type: script
+        name: terraform plan stage
+        script-content: ./scripts/tf-plan.sh stage
+  PlanProd:
+    name: Plan prod
+    runs-on: self-hosted
+    steps:
+      - type: script
+        name: terraform plan prod
+        script-content: ./scripts/tf-plan.sh prod
